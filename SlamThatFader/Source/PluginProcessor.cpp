@@ -9,6 +9,12 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+using namespace SlamThatFader;
+
+namespace {
+    auto ClipMax{juce::Decibels::decibelsToGain(-0.1f)};
+}
+
 //==============================================================================
 SlamThatFaderAudioProcessor::SlamThatFaderAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -20,12 +26,35 @@ SlamThatFaderAudioProcessor::SlamThatFaderAudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        )
+,
+#else
+:
 #endif
+m_parameters(*this, nullptr, "parameters", createParameterLayout())
 {
+    for (int i = 0; i < SlamThatFader_Parameters.size(); i++) {
+        auto& param = SlamThatFader_Parameters[i];
+
+        m_rawParameterValues[i] = m_parameters.getRawParameterValue(param.parameterID);
+    }
 }
 
 SlamThatFaderAudioProcessor::~SlamThatFaderAudioProcessor()
 {
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout SlamThatFaderAudioProcessor::createParameterLayout()
+{
+    std::vector<std::unique_ptr<juce::AudioParameterFloat>> params;
+    
+    for (int i = 0; i < SlamThatFader_Parameters.size(); i++) {
+        auto& param = SlamThatFader_Parameters[i];
+        params.push_back(std::make_unique<juce::AudioParameterFloat>(param.parameterID, param.name,
+                                                               param.minValue, param.maxValue,
+                                                               param.initialValue));
+    }
+    
+    return {params.begin(), params.end()};
 }
 
 //==============================================================================
@@ -93,8 +122,6 @@ void SlamThatFaderAudioProcessor::changeProgramName (int index, const juce::Stri
 //==============================================================================
 void SlamThatFaderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
 }
 
 void SlamThatFaderAudioProcessor::releaseResources()
@@ -144,17 +171,23 @@ void SlamThatFaderAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-
-        // ..do something to the data...
+    auto currentGain = m_rawParameterValues[ParamIndex::Gain]->load();
+    
+    currentGain = juce::Decibels::decibelsToGain(currentGain);
+    
+    // todo: less shitty smoothing
+    if (currentGain == m_prevGain) {
+        buffer.applyGain(currentGain);
+    } else {
+        buffer.applyGainRamp(0, buffer.getNumSamples(), m_prevGain, currentGain);
+        m_prevGain = currentGain;
+    }
+    
+    // clip
+    for (auto ch = 0; ch < buffer.getNumChannels(); ch++) {
+        juce::FloatVectorOperations::clip(buffer.getWritePointer(ch),
+                                          buffer.getWritePointer(ch),
+                                          -ClipMax, ClipMax, buffer.getNumSamples());
     }
 }
 
@@ -172,15 +205,21 @@ juce::AudioProcessorEditor* SlamThatFaderAudioProcessor::createEditor()
 //==============================================================================
 void SlamThatFaderAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    auto state = m_parameters.copyState();
+    std::unique_ptr<juce::XmlElement> xml (state.createXml());
+    copyXmlToBinary(*xml, destData);
 }
 
 void SlamThatFaderAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+ 
+    if (xmlState.get() != nullptr) {
+        if (xmlState->hasTagName (m_parameters.state.getType())) {
+            m_parameters.replaceState (juce::ValueTree::fromXml (*xmlState));
+        }
+    }
+            
 }
 
 //==============================================================================

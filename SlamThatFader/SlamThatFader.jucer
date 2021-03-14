@@ -4,6 +4,8 @@
               addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1">
   <MAINGROUP id="RnIkrx" name="SlamThatFader">
     <GROUP id="{A7CBBC44-5B88-844B-47C0-15AD6D1F7894}" name="Source">
+      <FILE id="nCwgLU" name="SlamThatFaderConstants.h" compile="0" resource="0"
+            file="Source/SlamThatFaderConstants.h"/>
       <FILE id="A1Nhgd" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="i29EsX" name="PluginProcessor.h" compile="0" resource="0"
