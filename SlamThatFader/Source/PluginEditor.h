@@ -17,7 +17,8 @@
 class SlamThatFaderAudioProcessorEditor  : public juce::AudioProcessorEditor
 {
 public:
-    SlamThatFaderAudioProcessorEditor (SlamThatFaderAudioProcessor&);
+    SlamThatFaderAudioProcessorEditor (SlamThatFaderAudioProcessor& processor,
+                                       juce::AudioProcessorValueTreeState& vts);
     ~SlamThatFaderAudioProcessorEditor() override;
 
     //==============================================================================
@@ -25,9 +26,11 @@ public:
     void resized() override;
 
 private:
-    // This reference is provided as a quick way for your editor to
-    // access the processor object that created it.
-    SlamThatFaderAudioProcessor& audioProcessor;
+    
+    juce::AudioProcessorValueTreeState& m_valueTreeState;
+    
+    juce::Slider m_gainSlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> m_gainAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SlamThatFaderAudioProcessorEditor)
 };

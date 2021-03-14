@@ -9,13 +9,26 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+namespace {
+    constexpr auto SliderY{40};
+constexpr auto SliderHeight{300};
+    constexpr auto SliderWidth{40};
+constexpr auto LabelTopMargin{20};
+    constexpr auto LabelHeight{40};
+}
+
 //==============================================================================
-SlamThatFaderAudioProcessorEditor::SlamThatFaderAudioProcessorEditor (SlamThatFaderAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p)
+SlamThatFaderAudioProcessorEditor::SlamThatFaderAudioProcessorEditor (SlamThatFaderAudioProcessor& processor,
+                                                                      juce::AudioProcessorValueTreeState& vts)
+: AudioProcessorEditor{processor}
+, m_valueTreeState{vts}
+, m_gainSlider{juce::Slider::SliderStyle::LinearVertical, juce::Slider::TextEntryBoxPosition::TextBoxBelow}
 {
-    // Make sure that before the constructor has finished, you've set the
-    // editor's size to whatever you need it to be.
-    setSize (400, 300);
+
+    addAndMakeVisible(m_gainSlider);
+    m_gainAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(m_valueTreeState, "gain", m_gainSlider));
+    
+    setSize(juce::jmax(SliderWidth, 300), SliderHeight + SliderY + LabelTopMargin + LabelHeight);
 }
 
 SlamThatFaderAudioProcessorEditor::~SlamThatFaderAudioProcessorEditor()
@@ -27,14 +40,13 @@ void SlamThatFaderAudioProcessorEditor::paint (juce::Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
-
-    g.setColour (juce::Colours::white);
-    g.setFont (15.0f);
-    g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
 }
 
 void SlamThatFaderAudioProcessorEditor::resized()
 {
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
+    auto r = getLocalBounds();
+
+    r.removeFromTop(SliderY);
+    
+    m_gainSlider.setBounds(r.removeFromTop(SliderHeight));
 }

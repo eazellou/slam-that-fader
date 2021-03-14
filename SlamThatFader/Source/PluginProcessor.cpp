@@ -194,12 +194,12 @@ void SlamThatFaderAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer
 //==============================================================================
 bool SlamThatFaderAudioProcessor::hasEditor() const
 {
-    return true; // (change this to false if you choose to not supply an editor)
+    return true;
 }
 
 juce::AudioProcessorEditor* SlamThatFaderAudioProcessor::createEditor()
 {
-    return new SlamThatFaderAudioProcessorEditor (*this);
+    return new SlamThatFaderAudioProcessorEditor(*this, m_parameters);
 }
 
 //==============================================================================
